@@ -1,0 +1,397 @@
+import React, { useState, useMemo } from 'react';
+import { 
+  BarChart3, 
+  TrendingUp, 
+  TrendingDown, 
+  DollarSign, 
+  Plus, 
+  Utensils, 
+  Trash2,
+  LayoutDashboard,
+  FileText,
+  Settings,
+  ListTree,
+  ClipboardList,
+  ChevronRight,
+  Download,
+  X
+} from 'lucide-react';
+import { 
+  Chart as ChartJS, 
+  CategoryScale, 
+  LinearScale, 
+  BarElement, 
+  Title, 
+  Tooltip, 
+  Legend, 
+  ArcElement 
+} from 'chart.js';
+import { Bar, Pie, Doughnut } from 'react-chartjs-2';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
+
+export default function App() {
+  // --- ESTADOS DE TRANSAÇÕES ---
+  const [transactions, setTransactions] = useState([
+    { id: 1, date: '2024-05-10', description: 'Bolo de Aniversário - Ana', category: 'Receita com Produtos', type: 'receita', amount: 150.00 },
+    { id: 2, date: '2024-05-12', description: 'Compra de Chocolate e Farinha', category: 'Custo com Produtos', type: 'despesa', amount: 85.50 },
+    { id: 3, date: '2024-05-15', description: 'Venda de 50 Brigadeiros', category: 'Receita com Produtos', type: 'receita', amount: 100.00 },
+    { id: 4, date: '2024-05-20', description: 'Embalagens para Entrega', category: 'Outras Despesas', type: 'despesa', amount: 45.00 },
+    { id: 5, date: '2024-05-22', description: 'Taxa MEI (DAS)', category: 'Impostos', type: 'despesa', amount: 72.00 },
+  ]);
+
+  // --- ESTADOS DE CATEGORIAS (Agora Editáveis) ---
+  const [revenueCategories, setRevenueCategories] = useState([
+    'Bolos Sob Encomenda', 
+    'Doces de Vitrine', 
+    'Venda de Bebidas', 
+    'Serviços de Buffet', 
+    'Revenda Externa'
+  ]);
+
+  const [expenseCategories, setExpenseCategories] = useState([
+    'Custo com Insumos', 
+    'Embalagens e Descartáveis', 
+    'Impostos (MEI)', 
+    'Marketing e Social Media', 
+    'Energia e Água', 
+    'Aluguel do Espaço'
+  ]);
+
+  const [activeTab, setActiveTab] = useState('dashboard'); 
+  const [activeView, setActiveView] = useState('mensal'); 
+  const [selectedMonth, setSelectedMonth] = useState('05');
+
+  const [newEntry, setNewEntry] = useState({
+    description: '',
+    amount: '',
+    type: 'receita',
+    category: 'Receita com Produtos',
+    date: new Date().toISOString().split('T')[0]
+  });
+
+  // --- CÁLCULOS ---
+  const totals = useMemo(() => {
+    const receitas = transactions.filter(t => t.type === 'receita').reduce((acc, curr) => acc + curr.amount, 0);
+    const despesas = transactions.filter(t => t.type === 'despesa').reduce((acc, curr) => acc + curr.amount, 0);
+    const lucro = receitas - despesas;
+    const lucratividade = receitas > 0 ? (lucro / receitas) * 100 : 0;
+
+    return { receitas, despesas, lucro, lucratividade };
+  }, [transactions]);
+
+  // --- FUNÇÕES ---
+  const handleAddTransaction = (e) => {
+    e.preventDefault();
+    if (!newEntry.description || !newEntry.amount) return;
+    const transaction = { ...newEntry, id: Date.now(), amount: parseFloat(newEntry.amount) };
+    setTransactions([transaction, ...transactions]);
+    setNewEntry({
+      description: '',
+      amount: '',
+      type: 'receita',
+      category: revenueCategories[0] || 'Receita Geral',
+      date: new Date().toISOString().split('T')[0]
+    });
+    setActiveTab('dashboard');
+  };
+
+  const deleteTransaction = (id) => {
+    setTransactions(transactions.filter(t => t.id !== id));
+  };
+
+  // Funções para gerir Categorias
+  const deleteCategory = (type, categoryName) => {
+    if (type === 'revenue') {
+      setRevenueCategories(revenueCategories.filter(cat => cat !== categoryName));
+    } else {
+      setExpenseCategories(expenseCategories.filter(cat => cat !== categoryName));
+    }
+  };
+
+  // --- COMPONENTES DE INTERFACE ---
+  
+  const Header = () => (
+    <header className="bg-[#2d3436] text-white px-6 py-3 flex items-center justify-between shadow-md sticky top-0 z-50">
+      <div className="flex items-center gap-8">
+        <div className="flex items-center gap-2">
+          <div className="bg-white p-1 rounded-full text-[#2d3436]">
+             <Utensils size={20} />
+          </div>
+          <span className="font-bold text-lg tracking-tight">Day confeitaria</span>
+        </div>
+        <nav className="hidden md:flex gap-6 text-sm font-medium uppercase text-gray-400">
+          <button onClick={() => setActiveTab('plano')} className={`hover:text-white transition-all py-1 ${activeTab === 'plano' ? 'text-white border-b-2 border-white' : ''}`}>Plano de Contas</button>
+          <button onClick={() => setActiveTab('lancamentos')} className={`hover:text-white transition-all py-1 ${activeTab === 'lancamentos' ? 'text-white border-b-2 border-white' : ''}`}>Lançamentos</button>
+          <button onClick={() => setActiveTab('relatorios')} className={`hover:text-white transition-all py-1 ${activeTab === 'relatorios' ? 'text-white border-b-2 border-white' : ''}`}>Relatórios</button>
+          <button onClick={() => setActiveTab('dashboard')} className={`hover:text-white transition-all py-1 ${activeTab === 'dashboard' ? 'text-white border-b-2 border-blue-400' : ''}`}>Dashboards</button>
+        </nav>
+      </div>
+      <div className="flex items-center gap-4 text-gray-400">
+        <Settings size={18} className="cursor-pointer hover:rotate-90 transition-transform" />
+      </div>
+    </header>
+  );
+
+  const SubHeader = () => (
+    <div className="bg-[#4b7bec] text-white px-6 py-2 flex items-center gap-2 overflow-x-auto text-xs font-semibold uppercase">
+      <button onClick={() => { setActiveView('mensal'); setActiveTab('dashboard'); }} className={`px-4 py-2 rounded transition-all whitespace-nowrap ${activeView === 'mensal' && activeTab === 'dashboard' ? 'bg-white text-[#4b7bec] shadow-sm' : 'hover:bg-blue-600'}`}>Análise Mensal</button>
+      <button onClick={() => { setActiveView('anual'); setActiveTab('dashboard'); }} className={`px-4 py-2 rounded transition-all whitespace-nowrap ${activeView === 'anual' && activeTab === 'dashboard' ? 'bg-white text-[#4b7bec] shadow-sm' : 'hover:bg-blue-600'}`}>Análise Anual</button>
+      <button onClick={() => { setActiveView('centro_custo'); setActiveTab('dashboard'); }} className={`px-4 py-2 rounded transition-all whitespace-nowrap ${activeView === 'centro_custo' && activeTab === 'dashboard' ? 'bg-white text-[#4b7bec] shadow-sm' : 'hover:bg-blue-600'}`}>Análise de Centro de Custo</button>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-16">
+      <Header />
+      <SubHeader />
+
+      <main className="p-6 max-w-7xl mx-auto space-y-6">
+        
+        {/* DASHBOARD */}
+        {activeTab === 'dashboard' && (
+          <div className="animate-in fade-in slide-in-from-top-4 duration-500 space-y-6">
+            <section className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div className="flex flex-col">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">Mês de Referência:</label>
+                  <select className="border-b border-gray-200 py-1 text-sm bg-transparent outline-none font-bold" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
+                    <option value="05">Maio / 2024</option>
+                    <option value="06">Junho / 2024</option>
+                  </select>
+                </div>
+              </div>
+              <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest italic">
+                Visão: <span className="text-blue-500">{activeView.replace('_', ' ')}</span>
+              </div>
+            </section>
+
+            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-[#4ade80] p-6 rounded-xl shadow-sm text-white relative overflow-hidden group">
+                <TrendingUp className="absolute right-[-10px] top-[-10px] w-24 h-24 opacity-10" />
+                <p className="text-xs font-bold uppercase opacity-90">Receitas</p>
+                <h2 className="text-3xl font-black mt-1">R$ {totals.receitas.toLocaleString('pt-BR')}</h2>
+              </div>
+              <div className="bg-[#f87171] p-6 rounded-xl shadow-sm text-white relative overflow-hidden group">
+                <TrendingDown className="absolute right-[-10px] top-[-10px] w-24 h-24 opacity-10" />
+                <p className="text-xs font-bold uppercase opacity-90">Despesas</p>
+                <h2 className="text-3xl font-black mt-1">R$ {totals.despesas.toLocaleString('pt-BR')}</h2>
+              </div>
+              <div className="bg-[#4ade80] p-6 rounded-xl shadow-sm text-white relative overflow-hidden group">
+                <DollarSign className="absolute right-[-10px] top-[-10px] w-24 h-24 opacity-10" />
+                <p className="text-xs font-bold uppercase opacity-90">Lucro / Prejuízo</p>
+                <h2 className="text-3xl font-black mt-1">R$ {totals.lucro.toLocaleString('pt-BR')}</h2>
+              </div>
+              <div className="bg-[#4ade80] p-6 rounded-xl shadow-sm text-white relative overflow-hidden group">
+                <BarChart3 className="absolute right-[-10px] top-[-10px] w-24 h-24 opacity-10" />
+                <p className="text-xs font-bold uppercase opacity-90">Lucratividade</p>
+                <h2 className="text-3xl font-black mt-1">{totals.lucratividade.toFixed(0)}%</h2>
+              </div>
+            </section>
+
+            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm h-[350px]">
+                <h3 className="text-xs font-black text-gray-400 mb-6 uppercase tracking-widest">Evolução Financeira</h3>
+                <div className="h-[250px]">
+                  <Bar data={{
+                    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai'],
+                    datasets: [
+                      { label: 'Receitas', data: [4200, 3800, 5100, 4800, totals.receitas], backgroundColor: '#4ade80' },
+                      { label: 'Despesas', data: [3100, 2900, 4260, 3500, totals.despesas], backgroundColor: '#f87171' }
+                    ]
+                  }} options={{ responsive: true, maintainAspectRatio: false }} />
+                </div>
+              </div>
+              <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex flex-col items-center">
+                  <h3 className="text-[10px] font-black text-gray-400 mb-6 uppercase w-full text-left">Resumo de Categorias</h3>
+                  <div className="h-[230px] w-full">
+                    <Doughnut data={{
+                      labels: ['Bolos', 'Doces', 'Salgados'],
+                      datasets: [{ data: [65, 25, 10], backgroundColor: ['#4ade80', '#22c55e', '#16a34a'] }]
+                    }} options={{ maintainAspectRatio: false }} />
+                  </div>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* LANÇAMENTOS */}
+        {activeTab === 'lancamentos' && (
+          <div className="animate-in slide-in-from-bottom-4 duration-500 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-md border-t-4 border-[#4b7bec]">
+              <h3 className="font-black mb-6 flex items-center gap-2 text-gray-700 uppercase tracking-tighter">
+                <Plus size={18} className="text-blue-500" /> NOVO REGISTRO
+              </h3>
+              <form onSubmit={handleAddTransaction} className="space-y-4">
+                <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+                  <button type="button" onClick={() => setNewEntry({...newEntry, type: 'receita'})} className={`flex-1 py-2 rounded-md text-[10px] font-bold transition-all ${newEntry.type === 'receita' ? 'bg-green-500 text-white shadow-sm' : 'text-gray-400'}`}>RECEITA</button>
+                  <button type="button" onClick={() => setNewEntry({...newEntry, type: 'despesa'})} className={`flex-1 py-2 rounded-md text-[10px] font-bold transition-all ${newEntry.type === 'despesa' ? 'bg-red-500 text-white shadow-sm' : 'text-gray-400'}`}>DESPESA</button>
+                </div>
+                <input type="text" placeholder="Descrição" className="w-full border rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-400" value={newEntry.description} onChange={e => setNewEntry({...newEntry, description: e.target.value})} />
+                <div className="grid grid-cols-2 gap-3">
+                  <input type="number" placeholder="Valor R$" className="w-full border rounded-lg px-4 py-2.5 text-sm outline-none font-bold" value={newEntry.amount} onChange={e => setNewEntry({...newEntry, amount: e.target.value})} />
+                  <input type="date" className="w-full border rounded-lg px-4 py-2.5 text-sm outline-none text-gray-500" value={newEntry.date} onChange={e => setNewEntry({...newEntry, date: e.target.value})} />
+                </div>
+                <select 
+                  className="w-full border rounded-lg px-4 py-2.5 text-sm outline-none bg-white"
+                  value={newEntry.category}
+                  onChange={e => setNewEntry({...newEntry, category: e.target.value})}
+                >
+                  {(newEntry.type === 'receita' ? revenueCategories : expenseCategories).map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+                <button className="w-full bg-[#4b7bec] text-white font-black py-3 rounded-xl text-sm shadow-lg hover:bg-blue-600 transition-all">SALVAR</button>
+              </form>
+            </div>
+            <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+               <div className="p-4 bg-gray-50 border-b flex justify-between items-center font-bold text-gray-700 uppercase text-xs tracking-widest">
+                 <span>HISTÓRICO</span>
+                 <span className="text-[10px] text-blue-600">Total: {transactions.length}</span>
+               </div>
+               <table className="w-full text-sm">
+                 <thead className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase">
+                   <tr><th className="p-4 text-left">Data</th><th className="p-4 text-left">Descrição</th><th className="p-4 text-right">Valor</th><th className="p-4"></th></tr>
+                 </thead>
+                 <tbody className="divide-y divide-gray-50">
+                   {transactions.map(t => (
+                     <tr key={t.id} className="hover:bg-blue-50/20">
+                       <td className="p-4 text-gray-400 text-xs">{new Date(t.date).toLocaleDateString('pt-BR')}</td>
+                       <td className="p-4 font-bold text-gray-800">{t.description}</td>
+                       <td className={`p-4 text-right font-black ${t.type === 'receita' ? 'text-green-500' : 'text-red-500'}`}>R$ {t.amount.toLocaleString('pt-BR')}</td>
+                       <td className="p-4 text-center"><button onClick={() => deleteTransaction(t.id)} className="text-gray-200 hover:text-red-500"><Trash2 size={16}/></button></td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+            </div>
+          </div>
+        )}
+
+        {/* PLANO DE CONTAS (Com Opção de Excluir) */}
+        {activeTab === 'plano' && (
+          <div className="animate-in fade-in duration-500 bg-white p-8 rounded-2xl shadow-sm border border-gray-100 min-h-[500px]">
+             <div className="flex items-center justify-between mb-10">
+                <div className="flex items-center gap-3">
+                  <div className="bg-blue-50 p-2 rounded-lg text-blue-500"><ListTree size={28} /></div>
+                  <div>
+                    <h2 className="text-2xl font-black text-gray-800 tracking-tight uppercase">Plano de Contas</h2>
+                    <p className="text-xs text-gray-400 font-bold uppercase">Gestão de Categorias</p>
+                  </div>
+                </div>
+                <button className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-[10px] font-black hover:bg-gray-200 flex items-center gap-2">
+                  <Plus size={14} /> NOVA CATEGORIA
+                </button>
+             </div>
+             
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+               {/* Coluna Receitas */}
+               <div className="space-y-6">
+                 <h3 className="text-xs font-black text-green-600 pb-2 border-b-2 border-green-50 uppercase tracking-widest flex justify-between items-center">
+                   <span>1.0 RECEITAS</span>
+                   <span className="text-[8px] bg-green-50 px-2 py-0.5 rounded-full">ATIVO</span>
+                 </h3>
+                 <div className="space-y-2">
+                   {revenueCategories.map((item, i) => (
+                     <div key={i} className="flex justify-between items-center p-4 bg-white hover:bg-green-50/30 rounded-xl transition-all border border-gray-100 hover:border-green-200 group">
+                       <div className="flex items-center gap-3">
+                         <span className="text-xs text-gray-300 font-bold">1.{i+1}</span>
+                         <span className="text-sm font-bold text-gray-700">{item}</span>
+                       </div>
+                       <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => deleteCategory('revenue', item)}
+                            className="p-1.5 text-gray-200 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-white rounded-md shadow-sm"
+                            title="Excluir Categoria"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                          <ChevronRight size={14} className="text-gray-200 group-hover:text-green-300" />
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+
+               {/* Coluna Despesas */}
+               <div className="space-y-6">
+                 <h3 className="text-xs font-black text-red-600 pb-2 border-b-2 border-red-50 uppercase tracking-widest flex justify-between items-center">
+                   <span>2.0 DESPESAS</span>
+                   <span className="text-[8px] bg-red-50 px-2 py-0.5 rounded-full">ATIVO</span>
+                 </h3>
+                 <div className="space-y-2">
+                   {expenseCategories.map((item, i) => (
+                     <div key={i} className="flex justify-between items-center p-4 bg-white hover:bg-red-50/30 rounded-xl transition-all border border-gray-100 hover:border-red-200 group">
+                       <div className="flex items-center gap-3">
+                         <span className="text-xs text-gray-300 font-bold">2.{i+1}</span>
+                         <span className="text-sm font-bold text-gray-700">{item}</span>
+                       </div>
+                       <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => deleteCategory('expense', item)}
+                            className="p-1.5 text-gray-200 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-white rounded-md shadow-sm"
+                            title="Excluir Categoria"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                          <ChevronRight size={14} className="text-gray-200 group-hover:text-red-300" />
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             </div>
+          </div>
+        )}
+
+        {/* RELATÓRIOS */}
+        {activeTab === 'relatorios' && (
+          <div className="animate-in zoom-in-95 duration-500 space-y-6">
+             <div className="bg-white p-8 rounded-2xl shadow-sm border h-fit">
+                <div className="flex items-center justify-between mb-10">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-purple-50 p-2 rounded-lg text-purple-500"><ClipboardList size={28} /></div>
+                    <h2 className="text-2xl font-black text-gray-800 tracking-tight uppercase">Resumo Estratégico</h2>
+                  </div>
+                  <button className="text-blue-500 flex items-center gap-2 font-black text-[10px] uppercase hover:underline">
+                    <Download size={14}/> PDF
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { label: 'Ponto de Equilíbrio', value: 'R$ 2.400,00' },
+                    { label: 'Margem de Contribuição', value: '42%' },
+                    { label: 'Ticket Médio', value: 'R$ 68,50' },
+                    { label: 'Custo Aquisição (CAC)', value: 'R$ 4,20' }
+                  ].map((stat, i) => (
+                    <div key={i} className="bg-gray-50/50 p-4 rounded-xl flex justify-between items-center border border-gray-100">
+                       <span className="font-black text-gray-400 uppercase text-[10px] tracking-widest">{stat.label}</span>
+                       <span className={`font-black text-lg text-gray-700`}>{stat.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+          </div>
+        )}
+
+      </main>
+
+      <footer className="fixed bottom-0 w-full bg-white border-t border-gray-100 px-6 py-3 text-[10px] text-gray-400 flex justify-between items-center shadow-lg z-50">
+        <div className="flex gap-4">
+          <span className="flex items-center gap-1 font-black text-green-600 uppercase">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Day confeitaria Online
+          </span>
+        </div>
+        <div className="font-bold uppercase tracking-widest text-gray-300">Gestão Confeitaria © 2024</div>
+      </footer>
+    </div>
+  );
+}
