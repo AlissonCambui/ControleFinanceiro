@@ -1,470 +1,421 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  LayoutDashboard, 
-  Package, 
-  ArrowUpCircle, 
-  ArrowDownCircle, 
-  Plus, 
-  Search, 
-  TrendingUp, 
-  Trash2, 
-  Calendar,
-  AlertCircle,
-  CircleDollarSign
-} from 'lucide-react';
-
-/**
- * APP: Day Confeitaria - Controle de Estoque
- * Versão atualizada com Card de Vendas (Faturamento)
- */
-
-const App = () => {
-  // --- ESTADO INICIAL ---
-  const [view, setView] = useState('dashboard');
-  
-  // Produtos baseados no seu catálogo
-  const [products, setProducts] = useState([
-    { id: 1, name: "Bolo de Morango", unitPrice: 12.99, shelfLife: 5 },
-    { id: 2, name: "Bolo de Pote Chocolate", unitPrice: 15.00, shelfLife: 3 }
-  ]);
-
-  // Movimentações iniciais
-  const [movements, setMovements] = useState([
-    { id: 101, date: "2026-02-28", productId: 1, type: 'IN', quantity: 10, totalValue: 129.90 },
-    { id: 102, date: "2026-02-28", productId: 1, type: 'OUT', quantity: 4, totalValue: 51.96 }
-  ]);
-
-  // --- FORMULÁRIOS ---
-  const [newProduct, setNewProduct] = useState({ name: '', unitPrice: '', shelfLife: '' });
-  const [newMovement, setNewMovement] = useState({ 
-    productId: '', 
-    type: 'OUT', 
-    quantity: '', 
-    date: new Date().toISOString().split('T')[0] 
-  });
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // --- LÓGICA DE CÁLCULO ---
-  const stockSummary = useMemo(() => {
-    const summary = {};
-    products.forEach(p => {
-      summary[p.id] = { 
-        ...p, 
-        qtyIn: 0, valIn: 0, 
-        qtyOut: 0, valOut: 0, 
-        balance: 0, currentValue: 0 
-      };
-    });
-
-    movements.forEach(m => {
-      if (summary[m.productId]) {
-        if (m.type === 'IN') {
-          summary[m.productId].qtyIn += Number(m.quantity);
-          summary[m.productId].valIn += Number(m.totalValue);
-        } else {
-          summary[m.productId].qtyOut += Number(m.quantity);
-          summary[m.productId].valOut += Number(m.totalValue);
-        }
-      }
-    });
-
-    Object.keys(summary).forEach(id => {
-      const item = summary[id];
-      item.balance = item.qtyIn - item.qtyOut;
-      item.currentValue = item.balance * item.unitPrice;
-    });
-
-    return summary;
-  }, [products, movements]);
-
-  // Totais globais atualizados para incluir Vendas
-  const totals = useMemo(() => {
-    return Object.values(stockSummary).reduce((acc, curr) => ({
-      quantity: acc.quantity + curr.balance,
-      stockValue: acc.stockValue + curr.currentValue,
-      totalSales: acc.totalSales + curr.valOut // Soma do faturamento bruto
-    }), { quantity: 0, stockValue: 0, totalSales: 0 });
-  }, [stockSummary]);
-
-  // --- AÇÕES ---
-  const addProduct = (e) => {
-    e.preventDefault();
-    if (!newProduct.name || !newProduct.unitPrice) return;
-    const item = { 
-      id: Date.now(), 
-      name: newProduct.name, 
-      unitPrice: parseFloat(newProduct.unitPrice), 
-      shelfLife: parseInt(newProduct.shelfLife) || 0 
-    };
-    setProducts([...products, item]);
-    setNewProduct({ name: '', unitPrice: '', shelfLife: '' });
-    setView('products');
-  };
-
-  const addMovement = (e) => {
-    e.preventDefault();
-    const product = products.find(p => p.id === parseInt(newMovement.productId));
-    if (!product || !newMovement.quantity) return;
-
-    const qty = parseFloat(newMovement.quantity);
-    const m = {
-      id: Date.now(),
-      date: newMovement.date,
-      productId: product.id,
-      type: newMovement.type,
-      quantity: qty,
-      totalValue: Number((qty * product.unitPrice).toFixed(2))
-    };
-
-    setMovements([m, ...movements]);
-    setNewMovement({ ...newMovement, quantity: '' });
-  };
-
-  const deleteProduct = (id) => setProducts(products.filter(p => p.id !== id));
-  const deleteMovement = (id) => setMovements(movements.filter(m => m.id !== id));
-
-  const NavButton = ({ id, icon: Icon, label }) => (
-    <button
-      onClick={() => setView(id)}
-      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-        view === id ? 'bg-pink-500 text-white shadow-md' : 'text-gray-600 hover:bg-pink-50'
-      }`}
-    >
-      <Icon size={18} />
-      <span className="font-medium">{label}</span>
-    </button>
-  );
-
-  return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20 md:pb-0">
-      {/* HEADER */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center text-pink-600">
-              <TrendingUp size={24} />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-slate-800">Day Confeitaria</h1>
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Controle de Vendas e Estoque</p>
-            </div>
-          </div>
-          
-          <nav className="hidden md:flex gap-2">
-            <NavButton id="dashboard" icon={LayoutDashboard} label="Resumo" />
-            <NavButton id="stock" icon={ArrowUpCircle} label="Movimentação" />
-            <NavButton id="products" icon={Package} label="Produtos" />
-          </nav>
-        </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto p-4 md:p-6">
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day Confeitaria - Gestão de Estoque</title>
+    <!-- Tailwind CSS para o Design -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React e Babel para processar o código no navegador -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Ícones Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
         
-        {/* VIEW: DASHBOARD */}
-        {view === 'dashboard' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* CARD: FATURAMENTO (NOVO) */}
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-l-blue-500">
-                <div className="flex justify-between items-start">
-                  <p className="text-slate-500 text-sm font-medium">Vendas Realizadas</p>
-                  <CircleDollarSign size={18} className="text-blue-500" />
-                </div>
-                <h2 className="text-2xl font-bold mt-2 text-blue-600">
-                  R$ {totals.totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </h2>
-                <p className="text-xs text-slate-400 mt-1">Total recebido bruto</p>
-              </div>
+        .animate-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="root"></div>
 
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-l-emerald-500">
-                <div className="flex justify-between items-start">
-                  <p className="text-slate-500 text-sm font-medium">Valor em Estoque</p>
-                  <TrendingUp size={18} className="text-emerald-500" />
-                </div>
-                <h2 className="text-2xl font-bold mt-2 text-emerald-600">
-                  R$ {totals.stockValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </h2>
-                <p className="text-xs text-slate-400 mt-1">Mercadoria para vender</p>
-              </div>
+    <script type="text/babel">
+        const { useState, useMemo, useEffect, useRef } = React;
+        
+        const Icon = ({ name, size = 20, className = "" }) => {
+            const iconRef = useRef(null);
+            
+            useEffect(() => {
+                if (window.lucide && iconRef.current) {
+                    iconRef.current.innerHTML = '';
+                    const i = document.createElement('i');
+                    const kebabName = name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+                    i.setAttribute('data-lucide', kebabName);
+                    iconRef.current.appendChild(i);
+                    window.lucide.createIcons({
+                        attrs: { width: size, height: size, class: className, 'stroke-width': 2 },
+                        root: iconRef.current
+                    });
+                }
+            }, [name, size, className]);
 
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <p className="text-slate-500 text-sm font-medium">Qtd. em Estoque</p>
-                <h2 className="text-2xl font-bold mt-2">{totals.quantity} <span className="text-sm font-normal text-slate-400">itens</span></h2>
-              </div>
+            return <span ref={iconRef} className="inline-flex items-center justify-center leading-none" />;
+        };
 
-              <div className="bg-pink-600 p-6 rounded-2xl shadow-lg text-white">
-                <p className="text-pink-100 text-sm font-medium">Total de Produtos</p>
-                <h2 className="text-2xl font-bold mt-2">{products.length} <span className="text-sm font-normal opacity-70">cadastros</span></h2>
-              </div>
-            </div>
+        const App = () => {
+            const [view, setView] = useState('dashboard');
+            
+            const [products, setProducts] = useState([
+                { id: 1, name: "Bolo de Morango", unitPrice: 12.99, shelfLife: 5 },
+                { id: 2, name: "Bolo de Pote Chocolate", unitPrice: 15.00, shelfLife: 3 }
+            ]);
 
-            {/* PESQUISA RÁPIDA */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-2 mb-4">
-                <Search size={20} className="text-slate-400" />
-                <h3 className="font-bold text-slate-700">Verificar Saldo de um Produto</h3>
-              </div>
-              <div className="flex flex-col md:flex-row gap-4">
-                <select 
-                  className="flex-1 p-3 border border-slate-200 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-pink-500"
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  value={searchTerm}
+            const [movements, setMovements] = useState([
+                { id: 101, date: "2026-02-28", productId: 1, type: 'IN', quantity: 10, totalValue: 129.90 },
+                { id: 102, date: "2026-02-28", productId: 1, type: 'OUT', quantity: 4, totalValue: 51.96 }
+            ]);
+
+            const [newProduct, setNewProduct] = useState({ name: '', unitPrice: '', shelfLife: '' });
+            const [editingProduct, setEditingProduct] = useState(null); // ID do produto sendo editado
+            const [editFormData, setEditFormData] = useState({ name: '', unitPrice: '' });
+
+            const [newMovement, setNewMovement] = useState({ 
+                productId: '', type: 'OUT', quantity: '', date: new Date().toISOString().split('T')[0] 
+            });
+            const [searchTerm, setSearchTerm] = useState('');
+
+            // LÓGICA DE CÁLCULO
+            const stockSummary = useMemo(() => {
+                const summary = {};
+                products.forEach(p => {
+                    summary[p.id] = { ...p, qtyIn: 0, valIn: 0, qtyOut: 0, valOut: 0, balance: 0, currentValue: 0 };
+                });
+
+                movements.forEach(m => {
+                    if (summary[m.productId]) {
+                        if (m.type === 'IN') {
+                            summary[m.productId].qtyIn += Number(m.quantity);
+                            summary[m.productId].valIn += Number(m.totalValue);
+                        } else {
+                            summary[m.productId].qtyOut += Number(m.quantity);
+                            summary[m.productId].valOut += Number(m.totalValue);
+                        }
+                    }
+                });
+
+                Object.keys(summary).forEach(id => {
+                    const item = summary[id];
+                    item.balance = item.qtyIn - item.qtyOut;
+                    item.currentValue = item.balance * item.unitPrice;
+                });
+                return summary;
+            }, [products, movements]);
+
+            const totals = useMemo(() => {
+                return Object.values(stockSummary).reduce((acc, curr) => ({
+                    quantity: acc.quantity + curr.balance,
+                    stockValue: acc.stockValue + curr.currentValue,
+                    totalSales: acc.totalSales + curr.valOut
+                }), { quantity: 0, stockValue: 0, totalSales: 0 });
+            }, [stockSummary]);
+
+            // FUNÇÕES DE PRODUTO
+            const addProduct = (e) => {
+                e.preventDefault();
+                if (!newProduct.name || !newProduct.unitPrice) return;
+                const item = { 
+                    id: Date.now(), 
+                    name: newProduct.name, 
+                    unitPrice: parseFloat(newProduct.unitPrice), 
+                    shelfLife: parseInt(newProduct.shelfLife) || 0 
+                };
+                setProducts([...products, item]);
+                setNewProduct({ name: '', unitPrice: '', shelfLife: '' });
+            };
+
+            const startEditing = (p) => {
+                setEditingProduct(p.id);
+                setEditFormData({ name: p.name, unitPrice: p.unitPrice });
+            };
+
+            const saveEdit = (id) => {
+                setProducts(products.map(p => 
+                    p.id === id ? { ...p, name: editFormData.name, unitPrice: parseFloat(editFormData.unitPrice) } : p
+                ));
+                setEditingProduct(null);
+            };
+
+            const deleteProduct = (id) => setProducts(products.filter(p => p.id !== id));
+
+            // FUNÇÕES DE MOVIMENTAÇÃO
+            const addMovement = (e) => {
+                e.preventDefault();
+                const product = products.find(p => p.id === parseInt(newMovement.productId));
+                if (!product || !newMovement.quantity) return;
+                const qty = parseFloat(newMovement.quantity);
+                const m = {
+                    id: Date.now(),
+                    date: newMovement.date,
+                    productId: product.id,
+                    type: newMovement.type,
+                    quantity: qty,
+                    totalValue: Number((qty * product.unitPrice).toFixed(2))
+                };
+                setMovements([...movements, m]);
+                setNewMovement({ ...newMovement, quantity: '' });
+            };
+
+            const deleteMovement = (id) => setMovements(movements.filter(m => m.id !== id));
+
+            const NavButton = ({ id, icon, label }) => (
+                <button
+                    onClick={() => setView(id)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 ${
+                        view === id ? 'bg-pink-500 text-white shadow-lg scale-105' : 'text-slate-600 hover:bg-pink-50'
+                    }`}
                 >
-                  <option value="">Selecione o produto...</option>
-                  {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-                
-                {searchTerm && stockSummary[searchTerm] && (
-                  <div className="flex gap-4 items-center animate-in fade-in slide-in-from-left-4 duration-300">
-                    <div className="bg-slate-100 px-6 py-3 rounded-xl border border-slate-200">
-                      <p className="text-xs text-slate-500 uppercase font-bold">Qtd Atual</p>
-                      <p className="text-xl font-bold">{stockSummary[searchTerm].balance}</p>
-                    </div>
-                    <div className="bg-emerald-50 px-6 py-3 rounded-xl border border-emerald-100">
-                      <p className="text-xs text-emerald-600 uppercase font-bold">Valor em Estoque</p>
-                      <p className="text-xl font-bold text-emerald-700">R$ {stockSummary[searchTerm].currentValue.toFixed(2)}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+                    <Icon name={icon} size={18} />
+                    <span className="font-bold text-sm">{label}</span>
+                </button>
+            );
 
-            {/* TABELA DE VISÃO GERAL */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                <h3 className="font-bold text-slate-700">Relatório Consolidado</h3>
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <AlertCircle size={14} />
-                  Valores baseados no preço unitário atual.
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="bg-slate-50/50 text-slate-500 text-xs uppercase tracking-wider">
-                      <th className="px-6 py-4">Produto</th>
-                      <th className="px-6 py-4 text-center">Entradas</th>
-                      <th className="px-6 py-4 text-center">Vendas (Saídas)</th>
-                      <th className="px-6 py-4 text-right">Saldo Final</th>
-                      <th className="px-6 py-4 text-right">Faturamento Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {Object.values(stockSummary).map(s => (
-                      <tr key={s.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4 font-semibold">{s.name}</td>
-                        <td className="px-6 py-4 text-center text-emerald-600 font-medium">+{s.qtyIn}</td>
-                        <td className="px-6 py-4 text-center text-rose-500 font-medium">-{s.qtyOut}</td>
-                        <td className="px-6 py-4 text-right">
-                          <span className={`inline-block px-3 py-1 rounded-full font-bold ${s.balance > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                            {s.balance}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right font-bold text-blue-700">
-                          R$ {s.valOut.toFixed(2)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* VIEW: MOVIMENTAÇÕES */}
-        {view === 'stock' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1">
-              <form onSubmit={addMovement} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm sticky top-24">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  <Plus size={20} className="text-pink-500" />
-                  Nova Venda ou Produção
-                </h3>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-tighter">Tipo de Operação</label>
-                    <div className="grid grid-cols-2 gap-2 mt-1">
-                      <button 
-                        type="button"
-                        onClick={() => setNewMovement({...newMovement, type: 'IN'})}
-                        className={`py-2 rounded-lg border flex items-center justify-center gap-1 text-sm font-bold transition-all ${newMovement.type === 'IN' ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'border-slate-200 text-slate-400'}`}
-                      >
-                        <ArrowUpCircle size={16} /> Entrada
-                      </button>
-                      <button 
-                        type="button"
-                        onClick={() => setNewMovement({...newMovement, type: 'OUT'})}
-                        className={`py-2 rounded-lg border flex items-center justify-center gap-1 text-sm font-bold transition-all ${newMovement.type === 'OUT' ? 'bg-rose-50 border-rose-500 text-rose-700' : 'border-slate-200 text-slate-400'}`}
-                      >
-                        <ArrowDownCircle size={16} /> Venda
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-tighter">Produto</label>
-                    <select 
-                      className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none"
-                      value={newMovement.productId}
-                      onChange={(e) => setNewMovement({...newMovement, productId: e.target.value})}
-                      required
-                    >
-                      <option value="">Selecione...</option>
-                      {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-tighter">Quantidade</label>
-                      <input 
-                        type="number" 
-                        step="0.01"
-                        className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none"
-                        value={newMovement.quantity}
-                        onChange={(e) => setNewMovement({...newMovement, quantity: e.target.value})}
-                        placeholder="0"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-tighter">Data</label>
-                      <input 
-                        type="date" 
-                        className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none"
-                        value={newMovement.date}
-                        onChange={(e) => setNewMovement({...newMovement, date: e.target.value})}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <button type="submit" className="w-full bg-slate-800 text-white py-4 rounded-xl font-bold hover:bg-slate-700 transition-all shadow-lg active:scale-95">
-                    Gravar Registro
-                  </button>
-                </div>
-              </form>
-            </div>
-
-            <div className="lg:col-span-2 space-y-4">
-              <h3 className="font-bold text-slate-700 flex items-center gap-2 px-2">
-                <Calendar size={18} className="text-slate-400" />
-                Histórico Recente
-              </h3>
-              
-              <div className="space-y-3">
-                {movements.map(m => {
-                  const prod = products.find(p => p.id === m.productId);
-                  return (
-                    <div key={m.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between group hover:shadow-md transition-all">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${m.type === 'IN' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
-                          {m.type === 'IN' ? <ArrowUpCircle size={20} /> : <ArrowDownCircle size={20} />}
+            return (
+                <div className="min-h-screen pb-24 md:pb-8">
+                    {/* CABEÇALHO */}
+                    <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+                        <div className="max-w-6xl mx-auto px-4 h-20 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-pink-500 rounded-2xl flex items-center justify-center text-white shadow-inner">
+                                    <Icon name="TrendingUp" size={28} />
+                                </div>
+                                <div>
+                                    <h1 className="text-2xl font-black text-slate-800 tracking-tight">Day Confeitaria</h1>
+                                    <p className="text-[10px] text-pink-500 font-black uppercase tracking-[0.2em]">Gestão Financeira</p>
+                                </div>
+                            </div>
+                            <nav className="hidden md:flex gap-2">
+                                <NavButton id="dashboard" icon="LayoutDashboard" label="Resumo" />
+                                <NavButton id="stock" icon="ArrowUpCircle" label="Movimentação" />
+                                <NavButton id="products" icon="Package" label="Produtos" />
+                            </nav>
                         </div>
-                        <div>
-                          <p className="font-bold text-slate-800">{prod?.name || 'Item Removido'}</p>
-                          <p className="text-xs text-slate-400 font-medium">{new Date(m.date).toLocaleDateString('pt-BR')}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-6">
-                        <div className="text-right">
-                          <p className={`font-bold ${m.type === 'IN' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                            {m.type === 'IN' ? '+' : '-'}{m.quantity} unid.
-                          </p>
-                          <p className="text-xs text-slate-500 font-mono">R$ {m.totalValue.toFixed(2)}</p>
-                        </div>
-                        <button onClick={() => deleteMovement(m.id)} className="p-2 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
+                    </header>
 
-        {/* VIEW: PRODUTOS */}
-        {view === 'products' && (
-          <div className="space-y-6">
-            <h3 className="text-2xl font-bold text-slate-800 px-2">Cardápio de Produtos</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-6 flex flex-col items-center justify-center space-y-4 hover:border-pink-300 transition-all">
-                <div className="w-12 h-12 bg-pink-50 rounded-full flex items-center justify-center text-pink-500">
-                  <Plus size={24} />
+                    <main className="max-w-6xl mx-auto p-4 md:p-8">
+                        {view === 'dashboard' && (
+                            <div className="space-y-8 animate-in">
+                                {/* CARDS PRINCIPAIS */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm border-l-[6px] border-l-blue-500">
+                                        <div className="flex justify-between items-start text-slate-400">
+                                            <span className="text-xs font-bold uppercase tracking-wider">Vendas Realizadas</span>
+                                            <Icon name="CircleDollarSign" className="text-blue-500" />
+                                        </div>
+                                        <h2 className="text-3xl font-black mt-2 text-slate-800">
+                                            R$ {totals.totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </h2>
+                                        <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase">Faturamento histórico</p>
+                                    </div>
+
+                                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm border-l-[6px] border-l-emerald-500">
+                                        <div className="flex justify-between items-start text-slate-400">
+                                            <span className="text-xs font-bold uppercase tracking-wider">Valor em Estoque</span>
+                                            <Icon name="TrendingUp" className="text-emerald-500" />
+                                        </div>
+                                        <h2 className="text-3xl font-black mt-2 text-slate-800">
+                                            R$ {totals.stockValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </h2>
+                                        <p className="text-[10px] text-emerald-600 mt-2 font-bold uppercase italic">Preço de hoje</p>
+                                    </div>
+
+                                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                                        <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Stock Físico</p>
+                                        <h2 className="text-3xl font-black mt-2 text-slate-800">{totals.quantity} <span className="text-sm font-medium text-slate-400">unid.</span></h2>
+                                    </div>
+
+                                    <div className="bg-slate-800 p-6 rounded-3xl shadow-xl text-white">
+                                        <p className="text-pink-300 text-xs font-bold uppercase tracking-wider">Itens no Menu</p>
+                                        <h2 className="text-3xl font-black mt-2">{products.length}</h2>
+                                    </div>
+                                </div>
+
+                                {/* PESQUISA RÁPIDA */}
+                                <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm ring-4 ring-slate-50">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <Icon name="Search" size={24} className="text-slate-400" />
+                                        <h3 className="text-xl font-black text-slate-800">Pesquisa de Saldo</h3>
+                                    </div>
+                                    <div className="flex flex-col md:flex-row gap-6">
+                                        <select 
+                                            className="flex-1 p-4 border-2 border-slate-100 rounded-2xl bg-slate-50 outline-none focus:border-pink-500 font-bold text-slate-700 cursor-pointer"
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            value={searchTerm}
+                                        >
+                                            <option value="">Selecione um produto...</option>
+                                            {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                        </select>
+                                        {searchTerm && stockSummary[searchTerm] && (
+                                            <div className="flex gap-4 animate-in">
+                                                <div className="bg-slate-900 text-white px-8 py-4 rounded-2xl shadow-lg">
+                                                    <p className="text-[10px] text-slate-400 uppercase font-black">Saldo</p>
+                                                    <p className="text-2xl font-black">{stockSummary[searchTerm].balance}</p>
+                                                </div>
+                                                <div className="bg-pink-500 text-white px-8 py-4 rounded-2xl shadow-lg">
+                                                    <p className="text-[10px] text-pink-100 uppercase font-black">Valor Atual</p>
+                                                    <p className="text-2xl font-black">R$ {stockSummary[searchTerm].currentValue.toFixed(2)}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* RELATÓRIO CONSOLIDADO */}
+                                <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+                                    <div className="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                                        <h3 className="font-black text-slate-800">Tabela de Desempenho</h3>
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                                            <Icon name="AlertCircle" size={12} /> Histórico de Vendas preservado
+                                        </span>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left">
+                                            <thead>
+                                                <tr className="text-slate-400 text-[10px] uppercase font-black tracking-widest border-b border-slate-50">
+                                                    <th className="px-8 py-6">Produto</th>
+                                                    <th className="px-8 py-6 text-center">Entradas</th>
+                                                    <th className="px-8 py-6 text-center">Vendas</th>
+                                                    <th className="px-8 py-6 text-right">Saldo</th>
+                                                    <th className="px-8 py-6 text-right">Faturamento Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50">
+                                                {Object.values(stockSummary).map(s => (
+                                                    <tr key={s.id} className="hover:bg-slate-50 transition-colors">
+                                                        <td className="px-8 py-5 font-bold text-slate-800">{s.name}</td>
+                                                        <td className="px-8 py-5 text-center text-emerald-500 font-bold">+{s.qtyIn}</td>
+                                                        <td className="px-8 py-5 text-center text-rose-500 font-bold">-{s.qtyOut}</td>
+                                                        <td className="px-8 py-5 text-right">
+                                                            <span className="px-3 py-1 bg-slate-100 rounded-lg font-black text-xs text-slate-600">{s.balance}</span>
+                                                        </td>
+                                                        <td className="px-8 py-5 text-right font-black text-blue-600">
+                                                            R$ {s.valOut.toFixed(2)}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'stock' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in">
+                                <div className="lg:col-span-1">
+                                    <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                                        <h3 className="text-xl font-black mb-6 text-slate-800">Novo Registro</h3>
+                                        <form onSubmit={addMovement} className="space-y-6">
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <button type="button" onClick={()=>setNewMovement({...newMovement, type:'IN'})} className={`p-4 rounded-2xl border-2 font-black text-xs flex flex-col items-center gap-2 ${newMovement.type==='IN'?'bg-emerald-50 border-emerald-500 text-emerald-700':'border-slate-100 text-slate-300'}`}>
+                                                    <Icon name="ArrowUpCircle" /> ENTRADA
+                                                </button>
+                                                <button type="button" onClick={()=>setNewMovement({...newMovement, type:'OUT'})} className={`p-4 rounded-2xl border-2 font-black text-xs flex flex-col items-center gap-2 ${newMovement.type==='OUT'?'bg-blue-50 border-blue-500 text-blue-700':'border-slate-100 text-slate-300'}`}>
+                                                    <Icon name="ArrowDownCircle" /> VENDA
+                                                </button>
+                                            </div>
+                                            <select className="w-full p-4 rounded-2xl bg-slate-50 font-bold outline-none focus:ring-2 focus:ring-pink-500" value={newMovement.productId} onChange={(e)=>setNewMovement({...newMovement, productId: e.target.value})} required>
+                                                <option value="">Produto...</option>
+                                                {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                            </select>
+                                            <input type="number" step="0.01" placeholder="Quantidade" className="w-full p-4 rounded-2xl bg-slate-50 font-bold outline-none focus:ring-2 focus:ring-pink-500" value={newMovement.quantity} onChange={(e)=>setNewMovement({...newMovement, quantity: e.target.value})} required />
+                                            <button type="submit" className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black shadow-lg hover:bg-slate-800 transition-all">GRAVAR REGISTRO</button>
+                                        </form>
+                                    </div>
+                                </div>
+                                <div className="lg:col-span-2 space-y-4">
+                                    <h3 className="text-xl font-black text-slate-800 px-2">Histórico</h3>
+                                    {movements.slice().reverse().map(m => {
+                                        const p = products.find(x => x.id == m.productId);
+                                        return (
+                                            <div key={m.id} className="bg-white p-5 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm group">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`p-3 rounded-xl ${m.type==='IN'?'bg-emerald-100 text-emerald-600':'bg-blue-100 text-blue-600'}`}>
+                                                        <Icon name={m.type==='IN'?'ArrowUpCircle':'ArrowDownCircle'} />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-black text-slate-800">{p?.name || 'Item Excluído'}</p>
+                                                        <p className="text-[10px] text-slate-400 font-bold uppercase">{new Date(m.date).toLocaleDateString()}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-6">
+                                                    <p className={`font-black text-lg ${m.type==='IN'?'text-emerald-500':'text-blue-500'}`}>
+                                                        {m.type==='IN'?'+':'-'}{m.quantity}
+                                                    </p>
+                                                    <button onClick={() => deleteMovement(m.id)} className="text-slate-200 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all">
+                                                        <Icon name="Trash2" size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'products' && (
+                            <div className="space-y-8 animate-in">
+                                <h3 className="text-2xl font-black text-slate-800">Menu de Produtos</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                    {/* CARD ADICIONAR */}
+                                    <div className="bg-white border-4 border-dashed border-slate-100 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-center space-y-6">
+                                        <div className="w-14 h-14 bg-pink-50 rounded-full flex items-center justify-center text-pink-500"><Icon name="Plus" size={28} /></div>
+                                        <div className="w-full space-y-4">
+                                            <input className="w-full p-4 rounded-xl bg-slate-50 border-none outline-none font-bold text-sm text-center" placeholder="Nome do Doce" value={newProduct.name} onChange={e=>setNewProduct({...newProduct, name:e.target.value})} />
+                                            <input className="w-full p-4 rounded-xl bg-slate-50 border-none outline-none font-bold text-sm text-center" placeholder="Preço" type="number" value={newProduct.unitPrice} onChange={e=>setNewProduct({...newProduct, unitPrice:e.target.value})} />
+                                            <button onClick={addProduct} className="w-full bg-pink-500 text-white p-4 rounded-xl font-black shadow-lg">ADICIONAR</button>
+                                        </div>
+                                    </div>
+
+                                    {/* LISTA DE PRODUTOS */}
+                                    {products.map(p => (
+                                        <div key={p.id} className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm relative group overflow-hidden hover:shadow-xl transition-all">
+                                            {editingProduct === p.id ? (
+                                                <div className="space-y-4 animate-in">
+                                                    <input className="w-full p-3 bg-slate-50 rounded-xl border-2 border-pink-200 font-bold text-slate-800" value={editFormData.name} onChange={e=>setEditFormData({...editFormData, name: e.target.value})} />
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-black text-slate-400">R$</span>
+                                                        <input className="w-full p-3 bg-slate-50 rounded-xl border-2 border-pink-200 font-black text-pink-500" type="number" step="0.01" value={editFormData.unitPrice} onChange={e=>setEditFormData({...editFormData, unitPrice: e.target.value})} />
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button onClick={()=>saveEdit(p.id)} className="flex-1 bg-slate-800 text-white p-3 rounded-xl font-black text-xs">SALVAR</button>
+                                                        <button onClick={()=>setEditingProduct(null)} className="flex-1 bg-slate-100 text-slate-400 p-3 rounded-xl font-black text-xs">CANCELAR</button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="flex justify-between items-start mb-6">
+                                                        <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400"><Icon name="Package" size={24} /></div>
+                                                        <div className="flex gap-2">
+                                                            <button onClick={() => startEditing(p)} className="p-2 text-slate-300 hover:text-blue-500 transition-colors"><Icon name="Pencil" size={18} /></button>
+                                                            <button onClick={() => deleteProduct(p.id)} className="p-2 text-slate-300 hover:text-rose-500 transition-colors"><Icon name="Trash2" size={18} /></button>
+                                                        </div>
+                                                    </div>
+                                                    <h4 className="text-2xl font-black text-slate-800">{p.name}</h4>
+                                                    <p className="text-[10px] font-black text-slate-400 mt-2 uppercase">Preço Unitário</p>
+                                                    <p className="text-4xl font-black text-pink-500 mt-2">R$ {p.unitPrice.toFixed(2)}</p>
+                                                    <div className="mt-8 pt-6 border-t border-slate-50">
+                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo em Stock: <span className="text-slate-800">{stockSummary[p.id]?.balance || 0}</span></span>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </main>
+
+                    {/* MOBILE NAV */}
+                    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-4 flex justify-around items-center z-50">
+                        <button onClick={()=>setView('dashboard')} className={`p-4 rounded-2xl ${view==='dashboard'?'bg-pink-500 text-white shadow-lg':'text-slate-300'}`}><Icon name="LayoutDashboard" /></button>
+                        <button onClick={()=>setView('stock')} className={`p-4 rounded-2xl ${view==='stock'?'bg-pink-500 text-white shadow-lg':'text-slate-300'}`}><Icon name="ArrowUpCircle" /></button>
+                        <button onClick={()=>setView('products')} className={`p-4 rounded-2xl ${view==='products'?'bg-pink-500 text-white shadow-lg':'text-slate-300'}`}><Icon name="Package" /></button>
+                    </div>
                 </div>
-                <div className="space-y-3 w-full">
-                  <input 
-                    className="w-full p-3 bg-slate-50 rounded-xl outline-none border border-transparent focus:border-pink-200 text-sm" 
-                    placeholder="Nome do Produto"
-                    value={newProduct.name}
-                    onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
-                  />
-                  <div className="flex gap-2">
-                    <input 
-                      type="number"
-                      className="w-1/2 p-3 bg-slate-50 rounded-xl outline-none border border-transparent focus:border-pink-200 text-sm" 
-                      placeholder="Preço R$"
-                      value={newProduct.unitPrice}
-                      onChange={(e) => setNewProduct({...newProduct, unitPrice: e.target.value})}
-                    />
-                    <button 
-                      onClick={addProduct}
-                      className="w-1/2 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 transition-all text-sm"
-                    >
-                      Cadastrar
-                    </button>
-                  </div>
-                </div>
-              </div>
+            );
+        };
 
-              {products.map(p => (
-                <div key={p.id} className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative group overflow-hidden">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-12 h-12 bg-pink-50 rounded-2xl flex items-center justify-center text-pink-500">
-                      <Package size={24} />
-                    </div>
-                    <button onClick={() => deleteProduct(p.id)} className="p-2 text-slate-300 hover:text-rose-500 transition-all">
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                  <h4 className="text-xl font-bold text-slate-800">{p.name}</h4>
-                  <div className="pt-4 border-t border-slate-50 flex justify-between items-end mt-4">
-                    <div>
-                      <p className="text-xs text-slate-400 font-bold uppercase mb-1">Preço</p>
-                      <p className="text-2xl font-black text-slate-800">R$ {p.unitPrice.toFixed(2)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-slate-400 font-bold uppercase mb-1">Stock</p>
-                      <p className={`text-lg font-bold ${stockSummary[p.id]?.balance > 0 ? 'text-emerald-500' : 'text-slate-300'}`}>
-                        {stockSummary[p.id]?.balance || 0}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* MOBILE NAV */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-2 flex justify-around items-center z-20 shadow-2xl">
-        <button onClick={() => setView('dashboard')} className={`p-3 rounded-xl ${view === 'dashboard' ? 'text-pink-600 bg-pink-50' : 'text-slate-400'}`}>
-          <LayoutDashboard size={24} />
-        </button>
-        <button onClick={() => setView('stock')} className={`p-3 rounded-xl ${view === 'stock' ? 'text-pink-600 bg-pink-50' : 'text-slate-400'}`}>
-          <ArrowUpCircle size={24} />
-        </button>
-        <button onClick={() => setView('products')} className={`p-3 rounded-xl ${view === 'products' ? 'text-pink-600 bg-pink-50' : 'text-slate-400'}`}>
-          <Package size={24} />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-export default App;
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
